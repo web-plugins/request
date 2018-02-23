@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <input type="file" id="myFile">
+    <button id="btn">click</button>
+    <script src="ajax.js"></script>
+    <script>
+        
+        btn.onclick = function () {
+            var url = "test.php",
+                data = {name: "txm"};
+
+            var file = myFile.files[0];
+            var fr = new FileReader();
+            fr.readAsDataURL(file);
+            fr.onloadend = function (e) {
+                var req = new Request({
+                    method: "POST",
+                    url: url,
+                    data: { file: fr.result },
+                    type: "json",
+                    header: {
+                        "Content-type": "application/x-www-form-urlencoded"
+                    },
+                    success: function(data){
+                        console.log(data);
+                    },
+                    error: function(){
+                        console.log("oops...");
+                    }
+                });
+                req.request();
+            };
+            
+        }
+    </script>
+</body>
+</html>
