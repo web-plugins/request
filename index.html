@@ -5,38 +5,36 @@
     <title>Title</title>
 </head>
 <body>
-    <input type="file" id="myFile">
-    <button id="btn">click</button>
-    <script src="ajax.js"></script>
-    <script>
-        
-        btn.onclick = function () {
-            var url = "test.php",
-                data = {name: "txm"};
+<button id="btn">click</button>
+<script>
 
-            var file = myFile.files[0];
-            var fr = new FileReader();
-            fr.readAsDataURL(file);
-            fr.onloadend = function (e) {
-                var req = new Request({
-                    method: "POST",
-                    url: url,
-                    data: { file: fr.result },
-                    type: "json",
-                    header: {
-                        "Content-type": "application/x-www-form-urlencoded"
-                    },
-                    success: function(data){
-                        console.log(data);
-                    },
-                    error: function(){
-                        console.log("oops...");
-                    }
-                });
-                req.request();
-            };
-            
+    window.onload = function () {
+        let url = "http://localhost:9999/test.php",
+            data = {name: "txm"};
+
+        http.config({
+            header: {
+                "Content-type": "application/x-www-form-urlencoded"
+            },
+        })
+
+        http.before({
+            fulfilled(config) {
+                console.log(config)
+                return config
+            }
+        })
+
+
+        http.get(url, data).then(res => {
+            console.log(res)
+        })
+
+        btn.onclick = function () {
+
         }
-    </script>
+    }
+
+</script>
 </body>
 </html>
