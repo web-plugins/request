@@ -12,7 +12,7 @@
         let url = "http://localhost:9999/test.php",
             data = {name: "txm"};
 
-        http.config({
+        http.setConfig({
             header: {
                 "Content-type": "application/x-www-form-urlencoded"
             },
@@ -25,14 +25,16 @@
             }
         })
 
+        http.after({
+            fulfilled(res) {
+                console.log('this is response middleware' )
+                return res
+            }
+        })
 
         http.get(url, data).then(res => {
             console.log(res)
         })
-
-        btn.onclick = function () {
-
-        }
     }
 
 </script>

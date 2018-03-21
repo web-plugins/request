@@ -1,93 +1,94 @@
-let browserRequest = require("./browser");
+let browserRequest = require("./browser")
 
-// todo 服务器环境请求对象不同
-let baseRequest = browserRequest
-
-function hasHostPrefix(url) {
-    return /^https?/.test(url);
-}
 
 class HttpModel {
-    constructor(config, opt = {}) {
+    constructor(requestEngine, config) {
         this.interceptors = {
             request: [],
             response: []
-        };
+        }
 
-        this.opt = opt;
+        this.requestEngine = requestEngine
 
-        this.config(config);
+        this.config = config
     }
 
-    config(params) {
-        this.host = params.host;
-
-        return this;
+    // 手动设置请求配置
+    setConfig(config) {
+        this.config = Object.assign(this.config, config)
     }
 
-    before(opt) {
-        this.interceptors.request.unshift(opt);
-        return this;
+    // 请求拦截器
+    before(interceptor) {
+        this.interceptors.request.unshift(interceptor)
+        return this
     }
 
-    after(opt) {
-        this.interceptors.response.push(opt);
+    // 响应拦截器
+    after(interceptor) {
+        this.interceptors.response.push(interceptor)
     }
 
-    request(url, method, params = {}) {
-        // 还原wx.request的参数格式
+    run(chain) {
+        // 添加中间件到执行链上
+        let {request, response} = this.interceptors
+
+        request.forEach(item => {
+            chain.unshift(item.fulfilled, item.rejected)
+        })
+        response.forEach(item => {
+            chain.push(item.fulfilled, item.rejected)
+        })
+
+        // 构建Promise链
+        let promise = Promise.resolve(this.config)
+        // todo catch error
+        while (chain.length) {
+            promise = promise.then(chain.shift(), chain.shift())
+        }
+
+        return promise
+    }
+
+    // 基础请求方法
+    request(url, method, params = {}, customConfig = {}) {
+        // 还原request参数格式
         let config = {
-            url: hasHostPrefix(url) ? url : this.host + url,
+            url: url,
             data: params,
             method: method
-        };
+        }
 
-        Object.assign(config, this.opt);
+        config = Object.assign(this.config, config, customConfig)
 
         let chain = [
             config => {
-                return baseRequest(config).then(result => {
-                    // 将响应状态和数据绑定到resource实例上
-                    this.status = result.statusCode;
-                    this.data = result.data;
-
-                    return result;
-                });
+                return this.requestEngine(config)
             },
             undefined
-        ];
+        ]
 
-        // 添加中间件到执行链上
-        this.interceptors.request.forEach(item => {
-            chain.unshift(item.fulfilled, item.rejected);
-        });
-        this.interceptors.response.forEach(item => {
-            chain.push(item.fulfilled, item.rejected);
-        });
-
-        let promise = Promise.resolve(config);
-
-        while (chain.length) {
-            promise = promise.then(chain.shift(), chain.shift());
-        }
-
-        return promise;
+        return this.run(chain)
     }
 }
 
 // 基本方法
-["GET", "POST", "HEAD", "DELETE", "PUT"].forEach(item => {
-    let method = item.toLowerCase();
+["GET", "POST", "DELETE", "PUT"].forEach(method => {
+    method = method.toLowerCase()
+    // 快捷请求方法
     HttpModel.prototype[method] = function (url, params = {}) {
-        return this.request(url, item, params);
-    };
-});
+        return this.request(url, method, params)
+    }
+})
 
-
-function createInstance(config) {
-    return new HttpModel(config)
+function createInstance(browserRequest, config) {
+    return new HttpModel(browserRequest, config)
 }
 
-let defaultConfig = {}
+let defaultConfig = {
+    header: {},
+    baseUrl: ''
+}
 
-export default createInstance(defaultConfig)
+// 默认使用浏览器请求对象
+export default createInstance(browserRequest, defaultConfig)
